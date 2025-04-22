@@ -311,27 +311,73 @@
             // Doğru cevabı belirleme
             const correctOption = correctAnswer;
             
-            // Diğer yanlış cevapları belirleme
+            // Diğer yanlış cevapları ve çeldiricileri belirleme
             const wrongOptions = [];
-            const possibleWrongs = [
+            
+            // Birinci çeldirici: En yaygın hata - Birler basamağı 5'ten küçük olsa bile yukarı yuvarlama,
+            // veya 5'ten büyük olduğu halde aşağı yuvarlama
+            const lastDigit = currentNumber % 10;
+            let mainDistractor;
+            
+            if (lastDigit < 5) {
+                // Aslında aşağı yuvarlanmalı ama yukarı yuvarlama hatası
+                mainDistractor = Math.ceil(currentNumber / 10) * 10;
+            } else {
+                // Aslında yukarı yuvarlanmalı ama aşağı yuvarlama hatası
+                mainDistractor = Math.floor(currentNumber / 10) * 10;
+            }
+            
+            // Çeldiriciyi ekle
+            wrongOptions.push(mainDistractor);
+            
+            // İkinci çeldirici: Sayıya onlar basamağı eklemek/çıkarmak yerine birler basamağını eklemek/çıkarmak
+            // Örneğin 47 -> 50 yerine 47 -> 47 + 7 = 54 veya 43 -> 40 yerine 43 -> 43 - 3 = 40
+            let secondDistractor;
+            if (lastDigit < 5) {
+                // Birler basamağını çıkar (ama 0'dan küçük olmamalı)
+                secondDistractor = currentNumber - lastDigit;
+                if (secondDistractor === correctOption) {
+                    // Eğer bu doğru cevapla aynıysa, farklı bir şey dene
+                    secondDistractor = currentNumber + lastDigit;
+                }
+            } else {
+                // Birler basamağını ekle
+                secondDistractor = currentNumber + lastDigit;
+                if (secondDistractor === correctOption) {
+                    // Eğer bu doğru cevapla aynıysa, farklı bir şey dene
+                    secondDistractor = currentNumber - lastDigit;
+                }
+            }
+            
+            // İkinci çeldiriciyi ekle (eğer doğru veya birinci çeldirici ile aynı değilse)
+            if (secondDistractor !== correctOption && secondDistractor !== mainDistractor &&
+                secondDistractor >= 0 && secondDistractor <= 100) {
+                wrongOptions.push(secondDistractor);
+            }
+            
+            // Diğer potansiyel çeldiriciler
+            const otherPossibleWrongs = [
                 correctOption - 10, 
                 correctOption + 10, 
                 correctOption - 20, 
                 correctOption + 20,
-                correctOption - 5,
-                correctOption + 5
+                // Yer değiştirme hatası (örn. 47 -> 74, veya 23 -> 32)
+                parseInt(currentNumber.toString().split('').reverse().join('')),
+                // Son rakamı ile en yakın 10'luk sayıyı topla (47 -> 50 + 7 = 57)
+                (Math.round(currentNumber / 10) * 10) + lastDigit
             ];
             
-            // Geçerli yanlış cevapları filtrele (1-100 arasında olmalı)
-            const validWrongs = possibleWrongs.filter(num => num >= 0 && num <= 100 && num !== correctOption);
+            // Geçerli yanlış cevapları filtrele (1-100 arasında olmalı, tekrar olmamalı)
+            const validWrongs = otherPossibleWrongs.filter(num => 
+                num >= 0 && num <= 100 && 
+                num !== correctOption && 
+                !wrongOptions.includes(num));
             
-            // Rastgele 3 yanlış cevap seç
+            // Eksik olan seçenek sayısını tamamla (toplam 4 seçenek)
             while (wrongOptions.length < 3 && validWrongs.length > 0) {
                 const randomIndex = Math.floor(Math.random() * validWrongs.length);
                 const wrongOption = validWrongs.splice(randomIndex, 1)[0];
-                if (!wrongOptions.includes(wrongOption)) {
-                    wrongOptions.push(wrongOption);
-                }
+                wrongOptions.push(wrongOption);
             }
             
             // Tüm seçenekleri birleştir ve karıştır
